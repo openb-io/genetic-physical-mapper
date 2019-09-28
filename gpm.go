@@ -11,7 +11,7 @@ import (
 
 var (
 	app    = kingpin.New("gpm", "move between genetic coordinates and physical coordinates with speed and confidence")
-	est    = app.Command("est", "estimate centimorgans")
+	est    = app.Command("intervals", "estimate centimorgan span of intervals")
 	input  = est.Flag("input", "path to input data, (g)zip or ascii").Required().Short('i').ExistingFile()
 	output = est.Flag("output", "path to output data").Required().Short('o').String()
 	bases  = est.Flag("bases", "bases per centimorgan").Required().Short('b').Int64()
@@ -32,7 +32,10 @@ func RunEstimate() {
 	s.Start()
 
 	client := estimate.NewClient(*input, *output, *bases)
-	client.EstimateLoci()
+	err := client.EstimateIntervals()
+	if err != nil {
+		panic(err)
+	}
 
 	s.Stop()
 }
