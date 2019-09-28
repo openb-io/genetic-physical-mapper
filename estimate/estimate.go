@@ -13,3 +13,7 @@ func NewClient(inFile string, output string, basesPer int64) *Client {
 		basesPer: basesPer,
 	}
 }
+
+func (c *Client) EstimateLoci() {
+
+}

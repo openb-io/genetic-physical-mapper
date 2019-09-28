@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"syscall"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -14,8 +13,8 @@ var (
 	app    = kingpin.New("gpm", "move between genetic coordinates and physical coordinates with speed and confidence")
 	est    = app.Command("est", "estimate centimorgans")
 	input  = est.Flag("input", "path to input data, (g)zip or ascii").Required().Short('i').ExistingFile()
-	output = est.Flag("output", "path to output data").Required().Short('o').OpenFile(syscall.O_RDWR, 0644)
-	bases  = est.Flag("bases", "bases per centimorgan").Required().Short('b').Int()
+	output = est.Flag("output", "path to output data").Required().Short('o').String()
+	bases  = est.Flag("bases", "bases per centimorgan").Required().Short('b').Int64()
 )
 
 func main() {
@@ -28,12 +27,12 @@ func main() {
 
 func RunEstimate() {
 
-	outputFile := *output
 	s := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
 	s.Prefix = "estimating genetic coordinates"
 	s.Start()
 
-	client := estimate.NewClient(input, output, bases)
+	client := estimate.NewClient(*input, *output, *bases)
+	client.EstimateLoci()
 
 	s.Stop()
 }
