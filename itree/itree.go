@@ -3,7 +3,6 @@ package itree
 import (
 	"bufio"
 	"fmt"
-	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -46,14 +45,19 @@ func New(gMap string) (*iTree, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		if CheckChrs(prevLocus, locus) {
-			intvl, err := MakeInterval(prevLocus, locus)
+			interval, err := MakeInterval(prevLocus, locus)
 			if err != nil {
 				return nil, err
 			}
 			answer.source[locus.chr][locus.pos] = locus.cM
-			answer.forest[prevLocus.chr].Add(*intvl)
+			s1 := answer.forest[prevLocus.chr].Len()
+			answer.forest[prevLocus.chr].Add(interval)
+			s2 := answer.forest[prevLocus.chr].Len()
+			if s2-s1 == 0 {
+				fmt.Printf("s1: %v\ts2: %v\n", s1, s2)
+				return nil, fmt.Errorf("failed to add interval %s:%v-%v", prevLocus.chr, prevLocus.pos, locus.pos)
+			}
 			prevLocus = locus
 		} else {
 			answer.forest[locus.chr] = augmentedtree.New(1)
@@ -131,7 +135,6 @@ type GenomicInterval struct {
 }
 
 func NewInterval(l1 *Locus, l2 *Locus) (*GenomicInterval, error) {
-	r := rand.New(rand.NewSource(99))
 
 	if l1.chr != l2.chr {
 		return nil, fmt.Errorf("chromosome mismatch: %s vs %s", l1.chr, l2.chr)
@@ -140,7 +143,7 @@ func NewInterval(l1 *Locus, l2 *Locus) (*GenomicInterval, error) {
 		return nil, fmt.Errorf("locus 1 has position higher than locus 2: %s %s")
 	}
 	return &GenomicInterval{
-		id:     r.Uint64(),
+		id:     uint64(l1.pos),
 		chr:    l1.chr,
 		start:  l1.pos,
 		end:    l2.pos,
@@ -174,10 +177,10 @@ func (g GenomicInterval) GeneticEnd() float64 {
 }
 
 func (i *iTree) Interpolate(chr string, pos int64) (float64, error) {
-	result := i.forest[chr].Query(GenomicInterval{
+	result := i.forest[chr].Query(&GenomicInterval{
 		chr:   chr,
 		start: pos,
-		end:   pos,
+		end:   pos + 1,
 	})
 	if len(result) < 1 {
 		return 0.0, fmt.Errorf("no intersecting interval found for %s:%v", chr, pos)
@@ -192,8 +195,6 @@ func (i *iTree) Interpolate(chr string, pos int64) (float64, error) {
 }
 
 func LinearInterpolation(x1 float64, x2 float64, xa float64, y1 float64, y2 float64) float64 {
-	if x2-x1 == 0 {
-		fmt.Printf("x2 - x1:  %v - %v \n", x2, x1)
-	}
+	fmt.Printf("x1: %v\tx2: %v\txa: %v\ty1: %v\ty2: %v\n", x1, x2, xa, y1, y2)
 	return (((xa - x1) / (x2 - x1)) * (y2 - y1)) + y1
 }
