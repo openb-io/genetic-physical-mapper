@@ -6,6 +6,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/plantimals/genetic-physical-mapper/itree"
 )
 
 type Client struct {
@@ -47,6 +49,50 @@ func (c *Client) EstimateIntervals() error {
 			return err
 		}
 		fmt.Fprintf(outp, "%s\t%v\n", line, float64(end-start)/float64(c.basesPer))
+	}
+	return nil
+}
+
+func (c *Client) InterpolateIntervals(gMap string) error {
+	iTree, err := itree.New(gMap)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("iTree forest: %v\tsource: %v\n", iTree.ForestSize(), iTree.SourceSize())
+	inp, err := os.Open(c.inFile)
+	if err != nil {
+		return err
+	}
+	defer inp.Close()
+	outp, err := os.OpenFile(c.output, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return err
+	}
+	defer outp.Close()
+
+	scanner := bufio.NewScanner(inp)
+	for scanner.Scan() {
+		line := scanner.Text()
+		data := strings.Split(line, "\t")
+		end, err := strconv.ParseInt(data[6], 10, 64)
+		if err != nil {
+			return err
+		}
+		cmEnd, err := iTree.Interpolate(data[4], end)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		start, err := strconv.ParseInt(data[5], 10, 64)
+		if err != nil {
+			return err
+		}
+		cmStart, err := iTree.Interpolate(data[4], start)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		fmt.Fprintf(outp, "%s\t%v\n", line, cmEnd-cmStart)
 	}
 	return nil
 }
